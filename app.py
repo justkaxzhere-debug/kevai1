@@ -1,30 +1,110 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 from groq import Groq
 
 app = Flask(__name__)
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
 chat_history = [
     {
         "role": "system",
-        "content": "Your name is Kevin's AI. You are a helpful, funny and friendly assistant who loves Pokemon. You speak casually like a friend, use simple language, and always stay enthusiastic and encouraging."
+        "content": "Your name is KevAI. You are a helpful, funny and friendly assistant who loves Pokemon. You speak casually like a friend, use simple language, and always stay enthusiastic and encouraging."
     }
 ]
 
 @app.route("/")
 def home():
-    return send_from_directory(".", "index.html")
+    return '''<!DOCTYPE html>
+<html>
+<head>
+  <title>KevAI</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: sans-serif; background: #0f0f0f; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    .container { width: 420px; height: 650px; background: #1a1a1a; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #333; }
+    .header { background: #6c3fc5; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
+    .avatar { width: 44px; height: 44px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+    .header-text h1 { color: white; font-size: 16px; }
+    .header-text p { color: #ddd; font-size: 11px; margin-top: 2px; }
+    .online-dot { width: 8px; height: 8px; background: #4ade80; border-radius: 50%; display: inline-block; margin-right: 4px; }
+    .messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .msg-row { display: flex; align-items: flex-end; gap: 8px; }
+    .msg-row.user { flex-direction: row-reverse; }
+    .msg-avatar { width: 28px; height: 28px; border-radius: 50%; background: #6c3fc5; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .message { max-width: 75%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.5; }
+    .user-msg { background: #6c3fc5; color: white; border-bottom-right-radius: 4px; }
+    .ai-msg { background: #2a2a2a; color: #eee; border-bottom-left-radius: 4px; border: 1px solid #333; }
+    .input-area { padding: 14px; border-top: 1px solid #333; display: flex; gap: 10px; }
+    input { flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid #444; background: #2a2a2a; color: white; font-size: 14px; outline: none; }
+    input:focus { border-color: #6c3fc5; }
+    button { background: #6c3fc5; color: white; border: none; padding: 10px 18px; border-radius: 20px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #7d4fd4; }
+    .typing { color: #888; font-size: 13px; font-style: italic; padding: 4px 8px; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="avatar">🤖</div>
+      <div class="header-text">
+        <h1>KevAI</h1>
+        <p><span class="online-dot"></span>Online — Powered by Groq + LLaMA</p>
+      </div>
+    </div>
+    <div class="messages" id="messages">
+      <div class="msg-row">
+        <div class="msg-avatar">🤖</div>
+        <div class="message ai-msg">Heyyyy! I am KevAI! What is on your mind? 🔥</div>
+      </div>
+    </div>
+    <div class="input-area">
+      <input type="text" id="input" placeholder="Type a message..." onkeydown="if(event.key===\'Enter\') sendMessage()"/>
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+  <script>
+    async function sendMessage() {
+      const input = document.getElementById("input");
+      const messages = document.getElementById("messages");
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = "";
+      const userRow = document.createElement("div");
+      userRow.className = "msg-row user";
+      userRow.innerHTML = `<div class="msg-avatar">👤</div><div class="message user-msg">${text}</div>`;
+      messages.appendChild(userRow);
+      const typing = document.createElement("div");
+      typing.className = "typing";
+      typing.textContent = "KevAI is typing...";
+      messages.appendChild(typing);
+      messages.scrollTop = messages.scrollHeight;
+      const response = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text })
+      });
+      const data = await response.json();
+      messages.removeChild(typing);
+      const aiRow = document.createElement("div");
+      aiRow.className = "msg-row";
+      aiRow.innerHTML = `<div class="msg-avatar">🤖</div><div class="message ai-msg">${data.reply}</div>`;
+      messages.appendChild(aiRow);
+      messages.scrollTop = messages.scrollHeight;
+    }
+  </script>
+</body>
+</html>'''
 
 @app.route("/chat", methods=["POST"])
 def chat():
     user_message = request.json["message"]
     chat_history.append({"role": "user", "content": user_message})
-
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=chat_history
     )
-
     reply = response.choices[0].message.content
     chat_history.append({"role": "assistant", "content": reply})
     return jsonify({"reply": reply})
