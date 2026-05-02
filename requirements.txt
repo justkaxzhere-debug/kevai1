@@ -4,3 +4,6 @@ requests
 gunicorn
 duckduckgo-search
 PyPDF2
+flask-sqlalchemy
+flask-login
+werkzeug
