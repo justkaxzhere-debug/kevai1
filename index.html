@@ -893,6 +893,46 @@
 
   /* ---- Bootstrap ---- */
   window.onload = checkAuth;
+  // PWA Service Worker Registration
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js")
+      .then(reg => console.log("App ready to install!"))
+      .catch(err => console.log("SW Error:", err));
+  });
+}
+
+// Install button logic
+let deferredPrompt;
+
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById("install-btn");
+  if (btn) {
+    btn.style.display = "flex";
+    btn.style.animation = "pulse 1.5s infinite";
+  }
+});
+
+window.addEventListener("appinstalled", () => {
+  const btn = document.getElementById("install-btn");
+  if (btn) btn.style.display = "none";
+  deferredPrompt = null;
+});
+
+async function installApp() {
+  if (!deferredPrompt) {
+    alert("To install: tap your browser menu and select Add to Home Screen!");
+    return;
+  }
+  deferredPrompt.prompt();
+  const result = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById("install-btn").style.display = "none";
+}
+
+  
 </script>
 </body>
 </html>
