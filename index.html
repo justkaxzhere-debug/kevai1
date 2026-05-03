@@ -4,11 +4,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <link rel="manifest" href="/manifest.json"/>
-<meta name="theme-color" content="#6c3fc5"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="KevAI"/>
-<link rel="apple-touch-icon" href="/static/icon-192.png"/>
+  <meta name="theme-color" content="#6c3fc5"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="KevAI"/>
+  <link rel="apple-touch-icon" href="/static/icon-192.png"/>
   <title>KevAI — Your Personal AI</title>
   <style>
     @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
@@ -273,14 +273,21 @@
       display: inline-block;
       transition: all 0.3s;
     }
+
+    /* ===== HEADER BUTTONS ===== */   /* ← FIX: moved out of .icon-btn block */
     .header-btns { display: flex; gap: 6px; }
     .icon-btn {
       background: rgba(255,255,255,0.15);
-      border: none; color: white;
-      width: 30px; height: 30px;
+      border: none;
+      color: white;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
-      cursor: pointer; font-size: 13px;
-      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: background 0.2s;
     }
     .icon-btn:hover { background: rgba(255,255,255,0.28); }
@@ -531,7 +538,9 @@
       <p>Personal AI buddy — always online</p>
       <div class="mood-badge" id="mood-badge">😊 Good vibes</div>
     </div>
+    <!-- ✅ FIX: header buttons are correctly placed here in HTML, NOT inside CSS -->
     <div class="header-btns">
+      <button class="icon-btn" id="install-btn" onclick="installApp()" title="Install App" style="display:none;">📲</button>
       <button class="icon-btn" onclick="toggleDark()" id="theme-toggle-btn" title="Toggle light/dark">🌙</button>
       <button class="icon-btn" onclick="clearChat()" title="Clear chat">🗑️</button>
     </div>
@@ -893,46 +902,45 @@
 
   /* ---- Bootstrap ---- */
   window.onload = checkAuth;
-  // PWA Service Worker Registration
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js")
-      .then(reg => console.log("App ready to install!"))
-      .catch(err => console.log("SW Error:", err));
+
+  /* ---- PWA Service Worker ---- */
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js")
+        .then(reg => console.log("App ready to install!"))
+        .catch(err => console.log("SW Error:", err));
+    });
+  }
+
+  /* ---- Install button logic ---- */
+  let deferredPrompt;
+
+  window.addEventListener("beforeinstallprompt", e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const btn = document.getElementById("install-btn");
+    if (btn) {
+      btn.style.display = "flex";
+      btn.style.animation = "pulse 1.5s infinite";
+    }
   });
-}
 
-// Install button logic
-let deferredPrompt;
+  window.addEventListener("appinstalled", () => {
+    const btn = document.getElementById("install-btn");
+    if (btn) btn.style.display = "none";
+    deferredPrompt = null;
+  });
 
-window.addEventListener("beforeinstallprompt", e => {
-  e.preventDefault();
-  deferredPrompt = e;
-  const btn = document.getElementById("install-btn");
-  if (btn) {
-    btn.style.display = "flex";
-    btn.style.animation = "pulse 1.5s infinite";
+  async function installApp() {
+    if (!deferredPrompt) {
+      alert("To install: tap your browser menu and select Add to Home Screen!");
+      return;
+    }
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById("install-btn").style.display = "none";
   }
-});
-
-window.addEventListener("appinstalled", () => {
-  const btn = document.getElementById("install-btn");
-  if (btn) btn.style.display = "none";
-  deferredPrompt = null;
-});
-
-async function installApp() {
-  if (!deferredPrompt) {
-    alert("To install: tap your browser menu and select Add to Home Screen!");
-    return;
-  }
-  deferredPrompt.prompt();
-  const result = await deferredPrompt.userChoice;
-  deferredPrompt = null;
-  document.getElementById("install-btn").style.display = "none";
-}
-
-  
 </script>
 </body>
 </html>
