@@ -10,6 +10,9 @@ from duckduckgo_search import DDGS
 import PyPDF2
 import io
 import math
+import base64
+from PIL import Image
+import io as io_module
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "kevai-secret-2026")
@@ -148,6 +151,31 @@ def calculate(expression):
 import random, string
 def generate_share_code():
     return "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
+def generate_image(prompt):
+    try:
+        hf_key = os.environ.get("HF_API_KEY")
+        if not hf_key:
+            return None, "No Hugging Face API key set"
+        
+        # Using Stable Diffusion XL — best free model
+        response = requests.post(
+            "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
+            headers={"Authorization": f"Bearer {hf_key}"},
+            json={"inputs": prompt},
+            timeout=60
+        )
+        
+        if response.status_code == 200:
+            # Convert image bytes to base64
+            img_data = base64.b64encode(response.content).decode("utf-8")
+            return img_data, None
+        elif response.status_code == 503:
+            return None, "Model is loading, try again in 20 seconds"
+        else:
+            return None, f"Generation failed: {response.status_code}"
+    except Exception as e:
+        return None, str(e)
 
 # ===== ROUTES =====
 @app.route("/")
