@@ -440,5 +440,22 @@ def service_worker():
     response.headers["Cache-Control"] = "no-cache"
     return response
 
+@app.route("/generate-image", methods=["POST"])
+@login_required
+def generate_image_route():
+    data = request.json
+    prompt = data.get("prompt", "")
+    if not prompt:
+        return jsonify({"error": "No prompt provided"}), 400
+    
+    # Enhance prompt automatically
+    enhanced = f"{prompt}, highly detailed, professional quality, 4k, beautiful lighting"
+    img_data, error = generate_image(enhanced)
+    
+    if error:
+        return jsonify({"error": error}), 500
+    
+    return jsonify({"image": img_data, "prompt": prompt})
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
