@@ -116,7 +116,9 @@ def get_weather(city):
 
 def detect_intent(message):
     msg = message.lower()
-    if any(w in msg for w in ["search","look up","find","news","latest","current","today","score","price","who is","what is happening"]):
+    if any(w in msg for w in ["generate image","create image","draw","paint","make an image","show me a picture","generate a picture","create a picture","imagine","visualize","make art"]):
+        return "image"
+    elif any(w in msg for w in ["search","look up","find","news","latest","current","today","score","price","who is","what is happening"]):
         return "search"
     elif any(w in msg for w in ["weather","temperature","forecast","hot","cold","raining"]):
         return "weather"
