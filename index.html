@@ -541,8 +541,10 @@
     <!-- ✅ FIX: header buttons are correctly placed here in HTML, NOT inside CSS -->
     <div class="header-btns">
       <button class="icon-btn" id="install-btn" onclick="installApp()" title="Install App" style="display:none;">📲</button>
-      <button class="icon-btn" onclick="toggleDark()" id="theme-toggle-btn" title="Toggle light/dark">🌙</button>
+      <button class="icon-btn" onclick="shareConvo()" title="Share chat">🔗</button>
+      <button class="icon-btn" onclick="toggleDark()" id="theme-toggle-btn" title="Toggle theme">🌙</button>
       <button class="icon-btn" onclick="clearChat()" title="Clear chat">🗑️</button>
+      <button class="icon-btn" onclick="logout()" title="Logout">🚪</button>
     </div>
   </div>
 
@@ -564,6 +566,9 @@
 
   <!-- Messages -->
   <div class="messages" id="messages"></div>
+
+  <!-- Conversation history (hidden by default, shown on tap) -->
+  <div id="conv-list" style="display:none;"></div>
 
   <!-- Mode chips -->
   <div class="modes">
@@ -888,15 +893,87 @@
     }
   }
 
-  /* ---- Onboarding ---- */
+  /* ---- Auth & Multi-user ---- */
+  async function checkAuth() {
+    const res = await fetch("/me");
+    if (res.status === 401) {
+      window.location.href = "/auth";
+      return;
+    }
+    const user = await res.json();
+    userName = user.username;
+    userCity = user.city;
+    currentTheme = user.theme || "dark";
+    document.documentElement.setAttribute("data-theme", currentTheme);
+    document.getElementById("city-input").value = userCity;
+    document.getElementById("ai-title").textContent = user.ai_name || "KevAI";
+    const ob = document.getElementById("onboarding");
+    if (ob) ob.style.display = "none";
+    const convoRes = await fetch("/conversations/new", { method: "POST" });
+    await loadBriefing(userCity);
+    loadConversationList();
+  }
+
+  async function loadConversationList() {
+    try {
+      const res = await fetch("/conversations");
+      const convos = await res.json();
+      const sidebar = document.getElementById("conv-list");
+      if (!sidebar) return;
+      sidebar.innerHTML = convos.length === 0
+        ? `<div style="color:var(--text-muted);font-size:12px;padding:8px;">No chats yet</div>`
+        : convos.map(c => `
+          <div class="conv-item" onclick="loadConvo(${c.id})">
+            <div class="conv-title">${c.title}</div>
+            <div class="conv-date">${c.created_at} ${c.is_shared ? "🔗" : ""}</div>
+          </div>`).join("");
+    } catch(e) {}
+  }
+
+  async function loadConvo(id) {
+    const res = await fetch(`/conversations/${id}`);
+    const messages = await res.json();
+    messagesEl.innerHTML = "";
+    chatHistory = [];
+    messages.forEach(m => {
+      if (m.role !== "system") {
+        addMessage(m.role === "user" ? "user" : "ai", m.content);
+        chatHistory.push(m);
+      }
+    });
+  }
+
+  async function shareConvo() {
+    try {
+      const convoRes = await fetch("/conversations");
+      const convos = await convoRes.json();
+      if (convos.length === 0) return alert("No conversations to share yet!");
+      const latest = convos[0];
+      const res = await fetch(`/conversations/${latest.id}/share`, { method: "POST" });
+      const data = await res.json();
+      const link = `${window.location.origin}/shared/${data.share_code}`;
+      navigator.clipboard.writeText(link);
+      alert(`Link copied to clipboard!\n\n${link}`);
+    } catch(e) {
+      alert("Could not share conversation");
+    }
+  }
+
+  async function logout() {
+    await fetch("/logout");
+    window.location.href = "/auth";
+  }
+
+  /* ---- Onboarding fallback ---- */
   function startChat() {
-    const nameInput = document.getElementById("onboard-name").value.trim();
-    const cityInput = document.getElementById("onboard-city").value.trim();
-    userName = nameInput || "there";
-    userCity = cityInput || "Chennai";
+    const nameInput = document.getElementById("onboard-name");
+    const cityInput = document.getElementById("onboard-city");
+    userName = nameInput ? nameInput.value.trim() || "there" : "there";
+    userCity = cityInput ? cityInput.value.trim() || "Chennai" : "Chennai";
     document.getElementById("city-input").value = userCity;
     document.getElementById("ai-title").textContent = `${userName}'s AI`;
-    document.getElementById("onboarding").style.display = "none";
+    const ob = document.getElementById("onboarding");
+    if (ob) ob.style.display = "none";
     loadBriefing(userCity);
   }
 

@@ -88,10 +88,28 @@ def web_search(query):
 
 def get_weather(city):
     try:
-        res = requests.get(f"https://wttr.in/{city}?format=3", timeout=10)
-        return res.text.strip()
+        geo = requests.get(
+            f"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=1",
+            timeout=8
+        ).json()
+        if not geo.get("results"):
+            return f"Could not find {city}"
+        r = geo["results"][0]
+        lat, lon = r["latitude"], r["longitude"]
+        w = requests.get(
+            f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true",
+            timeout=8
+        ).json()["current_weather"]
+        codes = {
+            0:"☀️ Clear",1:"🌤️ Mainly clear",2:"⛅ Partly cloudy",
+            3:"☁️ Overcast",45:"🌫️ Foggy",51:"🌦️ Drizzle",
+            61:"🌧️ Light rain",63:"🌧️ Rain",65:"🌧️ Heavy rain",
+            80:"🌦️ Showers",95:"⛈️ Thunderstorm"
+        }
+        condition = codes.get(w["weathercode"], "🌡️ Clear")
+        return f"{city}: {condition}, {w['temperature']}°C, Wind {w['windspeed']} km/h"
     except:
-        return f"Weather unavailable for {city}"
+        return f"{city}: Weather unavailable right now"
 
 def detect_intent(message):
     msg = message.lower()
