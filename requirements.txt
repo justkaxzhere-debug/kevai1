@@ -2,9 +2,5 @@ flask
 groq
 requests
 gunicorn
-duckduckgo-search
+duckduckgo-search==6.3.5
 PyPDF2
-flask-sqlalchemy
-flask-login
-werkzeug
-Pillow
